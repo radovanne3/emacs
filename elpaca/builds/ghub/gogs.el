@@ -1,1 +1,0 @@
-/Users/ned/.config/emacs/elpaca/repos/ghub/lisp/gogs.el
