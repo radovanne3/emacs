@@ -1,0 +1,297 @@
+(defvar elpaca-installer-version 0.6)
+(defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
+(defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
+(defvar elpaca-repos-directory (expand-file-name "repos/" elpaca-directory))
+(defvar elpaca-order '(elpaca :repo "https://github.com/progfolio/elpaca.git"
+			      :ref nil
+			      :files (:defaults "elpaca-test.el" (:exclude "extensions"))
+			      :build (:not elpaca--activate-package)))
+(let* ((repo  (expand-file-name "elpaca/" elpaca-repos-directory))
+       (build (expand-file-name "elpaca/" elpaca-builds-directory))
+       (order (cdr elpaca-order))
+       (default-directory repo))
+  (add-to-list 'load-path (if (file-exists-p build) build repo))
+  (unless (file-exists-p repo)
+    (make-directory repo t)
+    (when (< emacs-major-version 28) (require 'subr-x))
+    (condition-case-unless-debug err
+	(if-let ((buffer (pop-to-buffer-same-window "*elpaca-bootstrap*"))
+		 ((zerop (call-process "git" nil buffer t "clone"
+				       (plist-get order :repo) repo)))
+		 ((zerop (call-process "git" nil buffer t "checkout"
+				       (or (plist-get order :ref) "--"))))
+		 (emacs (concat invocation-directory invocation-name))
+		 ((zerop (call-process emacs nil buffer nil "-Q" "-L" "." "--batch"
+				       "--eval" "(byte-recompile-directory \".\" 0 'force)")))
+		 ((require 'elpaca))
+		 ((elpaca-generate-autoloads "elpaca" repo)))
+	    (progn (message "%s" (buffer-string)) (kill-buffer buffer))
+	  (error "%s" (with-current-buffer buffer (buffer-string))))
+      ((error) (warn "%s" err) (delete-directory repo 'recursive))))
+  (unless (require 'elpaca-autoloads nil t)
+    (require 'elpaca)
+    (elpaca-generate-autoloads "elpaca" repo)
+    (load "./elpaca-autoloads")))
+(add-hook 'after-init-hook #'elpaca-process-queues)
+(elpaca `(,@elpaca-order))
+
+;; Install use-package support
+(elpaca elpaca-use-package
+  ;; Enable :elpaca use-package keyword.
+  (elpaca-use-package-mode)
+  ;; Assume :elpaca t unless otherwise specified.
+  (setq elpaca-use-package-by-default t))
+
+;; Block until current queue processed.
+(elpaca-wait)
+
+;;When installing a package which modifies a form used at the top-level
+;;(e.g. a package which adds a use-package key word),
+;;use `elpaca-wait' to block until that package has been installed/configured.
+;;For example:
+;;(use-package general :demand t)
+;;(elpaca-wait)
+
+;;Turns off elpaca-use-package-mode current declartion
+;;Note this will cause the declaration to be interpreted immediately (not deferred).
+;;Useful for configuring built-in emacs features.
+;;(use-package emacs :elpaca nil :config (setq ring-bell-function #'ignore))
+
+;; Don't install anything. Defer execution of BODY
+;;(elpaca nil (message "deferred"))
+(defvar native-comp-deferred-compilation-deny-list nil) ;; Some native stuff that I don't understand
+
+;; Profile emacs startup
+(add-hook 'emacs-startup-hook
+	  (lambda ()
+	    (message "*** Emacs loaded in %s with %d garbage collections."
+		     (format "%.2f seconds"
+			     (float-time
+			      (time-subtract after-init-time before-init-time)))
+		     gcs-done)))
+;; Silence compiler warnings
+(setq comp-async-report-warnings-errors nil)
+;; DISABLE INITIALIZATION WARNINGS
+(setq warning-minimum-level :emergency)
+
+(setq gc-cons-thresold (* 50 1000 1000))
+(setq large-file-warning-thresold 100000000)
+
+(setq make-backup-files nil) ; stop creating ~ files
+
+(prefer-coding-system 'utf-8)
+(set-default-coding-systems 'utf-8)
+(set-terminal-coding-system 'utf-8)
+(set-keyboard-coding-system 'utf-8)
+
+;; Make ESC quit prompts so we dont bash in ESC key 3 times before it exists anything....
+(global-set-key (kbd "<escape>") 'keyboard-escape-quit)
+
+(use-package evil
+  :init
+  (setq evil-want-integration t)
+  (setq evil-want-keybinding nil)
+  (setq evil-want-C-u-scroll t)
+  (setq evil-want-C-i-jump nil)
+  (setq evil-vsplit-window-right t)
+  (setq evil-split-window-below t)
+  :config
+  (evil-mode 1)
+  (define-key evil-insert-state-map (kbd "C-g") 'evil-normal-state)
+  (define-key evil-insert-state-map (kbd "C-h") 'evil-delete-backward-char-and-join)
+
+  ;; Use visual line motions even outside of visual-line-mode buffers
+  (evil-global-set-key 'motion "j" 'evil-next-visual-line)
+  (evil-global-set-key 'motion "k" 'evil-previous-visual-line)
+
+  (evil-set-initial-state 'messages-buffer-mode 'normal)
+  (evil-set-initial-state 'dashboard-mode 'normal))
+
+(use-package evil-collection
+  :after evil
+  :config
+  (evil-collection-init))
+
+(with-eval-after-load 'evil-maps
+  (define-key evil-motion-state-map (kbd "SPC") nil)
+  (define-key evil-motion-state-map (kbd "RET") nil)
+  (define-key evil-motion-state-map (kbd "TAB") nil))
+;; Setting RETURN key in org-mode to follow links
+(setq org-return-follows-link  t)
+
+(setq inhibit-startup-message t)
+(setq inhibit-startup-screen t)
+(scroll-bar-mode -1)        ; Disable visible scrollbar
+(tool-bar-mode -1)          ; Disable the toolbar
+(tooltip-mode -1)           ; Disable tooltips
+(menu-bar-mode -1)          ; Disable the menu bar
+(pixel-scroll-precision-mode t)
+
+;; maximize screan on start
+(set-frame-parameter (selected-frame) 'fullscreen 'maximized)
+(add-to-list 'default-frame-alist '(fullscreen . maximized))
+(setq-default word-wrap t) ;; tidy
+
+(setq display-line-numbers-type 'relative)
+(global-display-line-numbers-mode)
+
+;; Disable line numbers for some modes
+(dolist (mode '(org-mode-hook
+		term-mode-hook
+		shell-mode-hook
+		treemacs-mode-hook
+		eshell-mode-hook))
+  (add-hook mode (lambda () (display-line-numbers-mode 0))))
+
+;; Hopefully fixes scroll behaviour
+(setq scroll-conservatively 1001
+      scroll-margin 10
+      scroll-preserve-screen-position 1)
+
+(global-set-key (kbd "C-=") 'text-scale-increase)
+(global-set-key (kbd "<C-wheel-up>") 'text-scale-increase)
+(global-set-key (kbd "C--") 'text-scale-decrease)
+(global-set-key (kbd "<C-wheel-down>") 'text-scale-decrease)
+
+(use-package doom-themes
+  :init (load-theme 'doom-one t))
+
+(use-package all-the-icons)
+
+(use-package doom-modeline
+  :init (doom-modeline-mode 1)
+  :custom ((doom-modeline-height 15)))
+
+(set-face-attribute 'default nil :font "Fira Code Retina")
+
+;; Set the fixed pitch face
+(set-face-attribute 'fixed-pitch nil :font "Fira Code Retina")
+
+;; Set the variable pitch face
+(set-face-attribute 'variable-pitch nil :font "Fira Code Retina" :weight 'regular)
+
+;; Needed if using emacsclient CHECK THIS??
+(add-to-list 'default-frame-alist '(font . "Fira Code Retina"))
+
+(use-package helpful
+  :custom
+  (counsel-describe-function-function #'helpful-callable)
+  (counsel-describe-variable-function #'helpful-variable)
+  :bind
+  ([remap describe-function] . counsel-describe-function)
+  ([remap describe-command] . helpful-command)
+  ([remap describe-variable] . counsel-describe-variable)
+  ([remap describe-key] . helpful-key))
+
+(fset 'yes-or-no-p 'y-or-n-p)
+
+(global-auto-revert-mode t)
+(add-hook 'before-save-hook 'whitespace-cleanup)
+
+(use-package magit
+  :commands (magit-status magit-get-current-branch)
+  :custom
+  (magit-display-buffer-function #'magit-display-buffer-same-window-except-diff-v1))
+
+(use-package forge)
+
+(use-package git-gutter-fringe
+  :diminish
+  :hook ((text-mode . git-gutter-mode)
+	 (prog-mode . git-gutter-mode))
+  :config
+  (setq git-gutter:update-interval 0.5)
+  (setq git-gutter:modified-sign "~")
+  (setq git-gutter:added-sign "+")
+  (setq git-gutter:deleted-sign "-")
+  (set-face-foreground 'git-gutter:added "LightGreen")
+  (set-face-foreground 'git-gutter:modified "LightGoldenrod")
+  (set-face-foreground 'git-gutter:deleted "LightCoral"))
+
+(use-package diminish)
+
+(use-package rainbow-delimiters
+  :hook ((emacs-lisp-mode . rainbow-delimiters-mode)
+	 (clojure-mode . rainbow-delimiters-mode)))
+
+(use-package rainbow-mode
+  :diminish
+  :hook org-mode prog-mode)
+
+(use-package toc-org
+  :commands toc-org-enable
+  :init (add-hook 'org-mode-hook 'toc-org-enable))
+
+(use-package org-bullets
+  :after org
+  :hook (org-mode . org-bullets-mode)
+  :custom
+  (org-bullets-bullet-list '("◉" "○" "●" "○" "●" "○" "●")))
+
+(defun verde/org-mode-visual-fill ()
+  (setq visual-fill-column-width 100
+	visual-fill-column-center-text t)
+  (visual-fill-column-mode 1))
+
+(use-package visual-fill-column
+  :hook (org-mode . verde/org-mode-visual-fill))
+
+;  (use-package general
+;    :config
+;    (general-evil-setup t))
+;  (general-create-definer verde/leader-key
+;			  :keymaps '(normal insert visual emacs)
+;			  :prefix "SPC")
+;
+;  (general-create-definer verde/local-leader-key
+;			  :states '(normal visual)
+;			  :keymaps 'override
+;
+;			  :prefix ",")
+;
+;  ;; TODO --> SET PREFIX FOR FILES, LSP
+;  ;; FIGURE OUT HOW TO USE LOCAL LEADER KEY FOR THIS
+;  (nvmap :prefix "SPC"
+;	 "SPC" '(counsel-M-x :wk "M-x")
+;	 "." '(find-file :wk "Find File")
+;	 ;; Buffers
+;	 "b"   '(:ignore t :wk "buffer")
+;	 "b b" 'ibuffer
+;	 "b k" 'kill-current-buffer
+;	 "b n" 'next-buffer
+;	 "b p" 'previous-buffer
+;	 "bB" '(ibuffer-list-buffers :wk "List buffers")
+;	 "bK" 'kill-buffer
+;	 ;; Eshell
+;	 "e"   '(:ignore t :wk "eshell")
+;	 "eh" '(counsel-esh-history :wk "[e]shell [h]istory")
+;	 "es" '(eshell :wk "[es]hell")
+;	 "f"   '(:ignore t :wk "format")
+;	 "fc" '(format-all-buffer :which-key "[f]ormat [c]ode")
+;	 "fr" '(format-all-region :which-key "[f]ormat [r]egion")
+;	 "hrr" '((lambda () (interactive) (load-file "~/.config/emacs/init.el")) :which-key "Reload emacs config")
+;	 ;; Terminal
+;	 "t"   '(:ignore t :wk "terminal")
+;	 "mt"  'multi-term
+;	 ;; Windows splits
+;	 "w"  '(:ignore t :wk "window")
+;	 "wc" '(evil-window-delete :wk "[w]indow [c]lose")
+;	 "wn" '(evil-window-new :wk "[w]indow [n]ew")
+;	 "wh" '(evil-window-split :wk "[w]indow [h]orizontal split")
+;	 "wv" '(evil-window-vsplit :wk "[w]indow [v]ertical split")
+;	 ;; Git
+;	 "g"   '(:ignore t :which-key "git")
+;	 "gs"  'magit-status
+;	 "gd"  'magit-diff-unstaged
+;	 "gc"  'magit-branch-or-checkout
+;	 "gl"   '(:ignore t :which-key "log")
+;	 "glc" 'magit-log-current
+;	 "glf" 'magit-log-buffer-file
+;	 "gb"  'magit-branch
+;	 "gP"  'magit-push-current
+;	 "gp"  'magit-pull-branch
+;	 "gf"  'magit-fetch
+;	 "gF"  'magit-fetch-all
+;	 "gr"  'magit-rebase
+
+;	 )

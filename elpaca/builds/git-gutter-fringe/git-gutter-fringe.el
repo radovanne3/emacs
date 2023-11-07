@@ -1,0 +1,1 @@
+/Users/ned/.config/emacs/elpaca/repos/git-gutter-fringe/git-gutter-fringe.el

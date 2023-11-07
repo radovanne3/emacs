@@ -1,0 +1,1 @@
+/Users/ned/.config/emacs/elpaca/repos/shrink-path/shrink-path.el
