@@ -18,6 +18,7 @@
   - [[#magit][Magit]]
   - [[#diminish][Diminish]]
   - [[#rainbow-delimiters-and-mode][Rainbow Delimiters and Mode]]
+  - [[#flycheck][Flycheck]]
   - [[#sudo][Sudo]]
   - [[#undo-tree][Undo-tree]]
   - [[#which-key][Which key]]
@@ -30,6 +31,9 @@
   - [[#perspective][Perspective]]
   - [[#completion][Completion]]
   - [[#treesitter][Treesitter]]
+  - [[#formating][Formating]]
+  - [[#language-server-protocol][Language Server Protocol]]
+  - [[#languages][Languages]]
 
 * CORE
 
@@ -322,6 +326,16 @@ True and only
     :hook org-mode prog-mode)
 #+end_src
 
+** Flycheck
+
+#+begin_src emacs-lisp
+  (use-package flycheck
+  :ensure t
+  :defer t
+  :diminish
+  :init (global-flycheck-mode))
+#+end_src
+
 ** Sudo
 
 #+begin_src emacs-lisp
@@ -412,92 +426,98 @@ True and only
 
 #+begin_src emacs-lisp
 
-  (use-package general
-    :config
-    (general-evil-setup)
+    (use-package general
+      :config
+      (general-evil-setup)
 
-    ;; set up 'SPC' as the global leader key
-    (general-create-definer verde/leader-keys
-      :states '(normal insert visual emacs)
-      :keymaps 'override
-      :prefix "SPC" ;; set leader
-      :global-prefix "M-SPC") ;; access leader in insert mode
+      ;; set up 'SPC' as the global leader key
+      (general-create-definer verde/leader-keys
+	:states '(normal insert visual emacs)
+	:keymaps 'override
+	:prefix "SPC" ;; set leader
+	:global-prefix "M-SPC") ;; access leader in insert mode
 
-    ;; general
-    (verde/leader-keys
-      "SPC" '(execute-extended-command :wk "Counsel M-x")
-      "=" '(perspective-map :wk "Worspace management") ;; Lists all the perspective keybindings
-      "q q" '(evil-quit :wk "Gtfo"))
-    ;; file navigation
-    (verde/leader-keys
-      "s" '(:ignore t :wk "Search")
-      "." '(find-file :wk "Find file")
-      "s s" '(consult-line :wk "Search line")
-      "s l" '(consult-goto-line :wk "Search line")
-      "s d" '(dictionary-search :wk "Search line")
+      (general-create-definer verde/local-leader-key
+	:states '(normal visual)
+	:keymaps 'override
+	:prefix ",")
+
+      ;; general
+      (verde/leader-keys
+	"SPC" '(execute-extended-command :wk "Counsel M-x")
+	"=" '(perspective-map :wk "Worspace management") ;; Lists all the perspective keybindings
+	"q q" '(evil-quit :wk "Gtfo"))
+      ;; file navigation
+      (verde/leader-keys
+	"s" '(:ignore t :wk "Search")
+	"." '(find-file :wk "Find file")
+	"s s" '(consult-line :wk "Search line")
+	"s l" '(consult-goto-line :wk "Search line")
+	"s d" '(dictionary-search :wk "Search line")
+	)
+
+      (verde/leader-keys
+	"b" '(:ignore t :wk "Bookmarks/Buffers")
+	"b b" '(switch-to-buffer :wk "Switch to buffer")
+	"b c" '(clone-indirect-buffer :wk "Create indirect buffer copy in a split")
+	"b C" '(clone-indirect-buffer-other-window :wk "Clone indirect buffer in new window")
+	"b d" '(bookmark-delete :wk "Delete bookmark")
+	"b i" '(consult-buffer :wk "Ibuffer")
+	"b k" '(kill-current-buffer :wk "Kill current buffer")
+	"b K" '(kill-some-buffers :wk "Kill multiple buffers")
+	"b l" '(list-bookmarks :wk "List bookmarks")
+	"b m" '(bookmark-set :wk "Set bookmark")
+	"b n" '(next-buffer :wk "Next buffer")
+	"b p" '(previous-buffer :wk "Previous buffer")
+	"b r" '(revert-buffer :wk "Reload buffer")
+	"b R" '(rename-buffer :wk "Rename buffer")
+	"b s" '(basic-save-buffer :wk "Save buffer")
+	"b S" '(save-some-buffers :wk "Save multiple buffers")
+	"b w" '(bookmark-save :wk "Save current bookmarks to bookmark file"))
+      ;; magit
+      (verde/leader-keys
+	"g" '(:ignore t :wk "Git/Goto")
+	"g g" '(magit-status :wk "Git"))
+
+      ;; magit
+      (verde/leader-keys
+	"h" '(:ignore t :wk "Help")
+	"h v" '(describe-variable :wk "Describe variable")
+	"h f" '(describe-function :wk "Describe variable")
+	"h r" '(:ignore t :wk "Reload")
+	"h r r" '((lambda () (interactive)
+		    (load-file "~/.config/emacs/init.el")
+		    (ignore (elpaca-process-queues)))
+		  :wk "Reload emacs config"))
+
+      ;; files
+      (verde/leader-keys
+	"f" '(:ignore t :wk "Files")
+	"f r" '(consult-recent-file :wk "Recent files")
+	"f u" '(sudo-edit-find-file :wk "Sudo find file")
+	"f U" '(sudo-edit :wk "Sudo edit file")
+	"f c" '((lambda () (interactive)
+		  (find-file "~/.config/emacs/config.org"))
+		:wk "Open emacs config.org")
+	"f P" '((lambda () (interactive)
+		  (dired "~/.config/emacs/"))
+		:wk "Open user-emacs-directory in dired"))
+      ;; projectile
+      (verde/leader-keys
+	"p" '(projectile-command-map :wk "Projectile"))
+      ;; dired
+      (verde/leader-keys
+	"d" '(:ignore t :wk "Dired")
+	"d d" '(dired :wk "Open dired")
+	"d j" '(dired-jump :wk "Dired jump to current")
+	"d p" '(peep-dired :wk "Peep-dired"))
+      ;; open
+      (verde/leader-keys
+	"o" '(:ignore t :wk "Open/Toggle")
+	"o t" '(vterm-toggle :wk "Toggle Vterm")
+	"o e" '(vterm-toggle :wk "Toggle Treemacs"))
+
       )
-
-    (verde/leader-keys
-      "b" '(:ignore t :wk "Bookmarks/Buffers")
-      "b b" '(switch-to-buffer :wk "Switch to buffer")
-      "b c" '(clone-indirect-buffer :wk "Create indirect buffer copy in a split")
-      "b C" '(clone-indirect-buffer-other-window :wk "Clone indirect buffer in new window")
-      "b d" '(bookmark-delete :wk "Delete bookmark")
-      "b i" '(consult-buffer :wk "Ibuffer")
-      "b k" '(kill-current-buffer :wk "Kill current buffer")
-      "b K" '(kill-some-buffers :wk "Kill multiple buffers")
-      "b l" '(list-bookmarks :wk "List bookmarks")
-      "b m" '(bookmark-set :wk "Set bookmark")
-      "b n" '(next-buffer :wk "Next buffer")
-      "b p" '(previous-buffer :wk "Previous buffer")
-      "b r" '(revert-buffer :wk "Reload buffer")
-      "b R" '(rename-buffer :wk "Rename buffer")
-      "b s" '(basic-save-buffer :wk "Save buffer")
-      "b S" '(save-some-buffers :wk "Save multiple buffers")
-      "b w" '(bookmark-save :wk "Save current bookmarks to bookmark file"))
-    ;; magit
-    (verde/leader-keys
-      "g" '(:ignore t :wk "Git/Goto")
-      "g g" '(magit-status :wk "Git"))
-
-    ;; magit
-    (verde/leader-keys
-      "h" '(:ignore t :wk "Help")
-      "h v" '(describe-variable :wk "Describe variable")
-      "h f" '(describe-function :wk "Describe variable")
-      "h r" '(:ignore t :wk "Reload")
-      "h r r" '((lambda () (interactive)
-		  (load-file "~/.config/emacs/init.el")
-		  (ignore (elpaca-process-queues)))
-		:wk "Reload emacs config"))
-
-    ;; files
-    (verde/leader-keys
-      "f" '(:ignore t :wk "Files")
-      "f r" '(consult-recent-file :wk "Recent files")
-      "f u" '(sudo-edit-find-file :wk "Sudo find file")
-      "f U" '(sudo-edit :wk "Sudo edit file")
-      "f c" '((lambda () (interactive)
-		(find-file "~/.config/emacs/config.org"))
-	      :wk "Open emacs config.org")
-      "f P" '((lambda () (interactive)
-		(dired "~/.config/emacs/"))
-	      :wk "Open user-emacs-directory in dired"))
-    ;; projectile
-    (verde/leader-keys
-      "p" '(projectile-command-map :wk "Projectile"))
-    ;; dired
-    (verde/leader-keys
-      "d" '(:ignore t :wk "Dired")
-      "d d" '(dired :wk "Open dired")
-      "d j" '(dired-jump :wk "Dired jump to current")
-      "d p" '(peep-dired :wk "Peep-dired"))
-    ;; open
-    (verde/leader-keys
-      "t" '(:ignore t :wk "Toggle")
-      "t t" '(vterm-toggle :wk "Toggle Vterm"))
-
-    )
 
 #+end_src
 
@@ -656,4 +676,104 @@ True and only
   (use-package tree-sitter)
   (use-package tree-sitter-langs)
 
+#+end_src
+
+** Formating
+
+#+begin_src emacs-lisp
+  (use-package format-all
+  :init
+  (add-hook 'prog-mode-hook 'format-all-mode))
+#+end_src
+
+** Language Server Protocol
+
+#+begin_src emacs-lisp
+  (use-package lsp-mode
+  :commands
+  (lsp lsp-deferred)
+  :hook
+  ((lsp-mode . (lambda () (setq-local evil-lookup-func #'lsp-describe-thing-at-point)))
+   (lsp-mode . lsp-enable-which-key-integration))
+  :general
+  (verde/leader-key
+    :states 'normal
+    :keymaps 'lsp-mode-map
+   ;; LSP
+   "g"   '(:ignore t :which-key "goto")
+   "g t" '(lsp-find-type-definition :which-key "type definition")
+   ;; lsp find
+   "g d" '(lsp-find-definition :which-key "definition")
+   "g r" '(lsp-find-references :which-key "reference")
+   "g i" '(lsp-find-implementation :which-key "implementation")
+   ;; lsp format
+   "c"   '(:ignore t :which-key "code")
+   "c f"  '(:ignore t :which-key "format")
+   "c f b" 'lsp-format-buffer
+   "c f r" 'lsp-format-region
+
+   "rn"  'lsp-rename
+    )
+  :init
+  (setq lsp-restart 'ignore)
+  (setq lsp-eldoc-enable-hover t)
+  (setq lsp-enable-file-watchers nil)
+  (setq lsp-signature-auto-activate nil)
+  (setq lsp-modeline-diagnostics-enable t)
+  (setq lsp-keep-workspace-alive nil)
+  (setq lsp-auto-execute-action nil)
+  (setq lsp-before-save-edits nil)
+  (setq lsp-headerline-breadcrumb-enable nil)
+  (setq lsp-diagnostics-provider :flycheck))
+
+  (use-package lsp-ui
+  :hook
+  ((lsp-mode . lsp-ui-mode)
+   ;; (lsp-mode . (lambda () (setq-local evil-goto-definition-functions '(lambda (&rest args) (lsp-ui-peek-find-definitions)))))
+   )
+  ;; :bind
+  ;; (:map lsp-ui-mode-map
+  ;;       ([remap lsp-find-references] . lsp-ui-peek-find-references))
+  :general
+  (verde/local-leader-key
+   "h" 'lsp-ui-doc-show
+   "H" 'lsp-ui-doc-hide)
+  (lsp-ui-peek-mode-map
+   :states 'normal
+   "C-j" 'lsp-ui-peek--select-next
+   "C-k" 'lsp-ui-peek--select-prev)
+  (outline-mode-map
+   :states 'normal
+   "C-j" 'nil
+   "C-k" 'nil)
+  :init
+  (setq lsp-ui-doc-show-with-cursor t)
+  (setq lsp-ui-doc-show-with-mouse nil)
+  (setq lsp-ui-peek-always-show t)
+  (setq lsp-ui-peek-fontify 'always))
+
+  (use-package lsp-treemacs
+  :after lsp
+  :custom
+  (lsp-treemacs-theme "doom-colors")
+  (treemacs-width 35)
+  (treemacs-git-mode 'extended)
+  (treemacs-git-display-mode 'treemacs-git-display-mode-git-status)
+  (treemacs-show-hidden-files t)
+  (treemacs-silent-refresh t)
+  (treemacs-silent-filewatch t)
+  (treemacs-collapse-dirs 0)
+  (treemacs-filewatch-mode 'deferred))
+#+end_src
+
+** Languages
+
+*** Typescript
+
+#+begin_src emacs-lisp
+(use-package typescript-mode
+  :mode "\\.ts\\'"
+  :hook (typescript-mode . lsp-deferred)
+  :config
+  (setq typescript-indent-level 2))
 #+end_src
