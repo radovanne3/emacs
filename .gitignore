@@ -2,3 +2,7 @@ elpaca/
 auto-save-list/
 transient/
 eln-cache/
+projectile/
+forge-*/
+sessions/
+./config.el
