@@ -22,6 +22,7 @@
   - [[#undo-tree][Undo-tree]]
   - [[#which-key][Which key]]
   - [[#dired][Dired]]
+  - [[#vterm][Vterm]]
   - [[#general-keybindings][General keybindings]]
 - [[#org-mode][ORG MODE]]
 - [[#programming][Programming]]
@@ -370,6 +371,43 @@ True and only
     (evil-define-key 'normal peep-dired-mode-map (kbd "k") 'peep-dired-prev-file))
 #+end_src
 
+** Vterm
+
+#+begin_src emacs-lisp
+  (use-package vterm
+    :config
+    (setq vterm-max-scrollback 50000)
+    (defun evil-collection-vterm-escape-stay ()
+      "Go back to normal state but don't move
+  cursor backwards. Moving cursor backwards is the default vim behavior but it is
+  not appropriate in some cases like terminals."
+      (setq-local evil-move-cursor-back nil))
+
+    (add-hook 'vterm-mode-hook #'evil-collection-vterm-escape-stay))
+
+  (use-package vterm-toggle
+  :after vterm
+  :config
+  ;; When running programs in Vterm and in 'normal' mode, make sure that ESC
+  ;; kills the program as it would in most standard terminal programs.
+  (evil-define-key 'normal vterm-mode-map (kbd "<escape>") 'vterm--self-insert)
+  (setq vterm-toggle-fullscreen-p nil)
+  (setq vterm-toggle-scope 'project)
+  (add-to-list 'display-buffer-alist
+	       '((lambda (buffer-or-name _)
+		     (let ((buffer (get-buffer buffer-or-name)))
+		       (with-current-buffer buffer
+			 (or (equal major-mode 'vterm-mode)
+			     (string-prefix-p vterm-buffer-name (buffer-name buffer))))))
+		  (display-buffer-reuse-window display-buffer-at-bottom)
+		  ;;(display-buffer-reuse-window display-buffer-in-direction)
+		  ;;display-buffer-in-direction/direction/dedicated is added in emacs27
+		  ;;(direction . bottom)
+		  ;;(dedicated . t) ;dedicated is supported in emacs27
+		  (reusable-frames . visible)
+		  (window-height . 0.4))))
+#+end_src
+
 ** General keybindings
 
 #+begin_src emacs-lisp
@@ -448,12 +486,17 @@ True and only
     ;; projectile
     (verde/leader-keys
       "p" '(projectile-command-map :wk "Projectile"))
-
+    ;; dired
     (verde/leader-keys
       "d" '(:ignore t :wk "Dired")
       "d d" '(dired :wk "Open dired")
       "d j" '(dired-jump :wk "Dired jump to current")
       "d p" '(peep-dired :wk "Peep-dired"))
+    ;; open
+    (verde/leader-keys
+      "t" '(:ignore t :wk "Toggle")
+      "t t" '(vterm-toggle :wk "Toggle Vterm"))
+
     )
 
 #+end_src
