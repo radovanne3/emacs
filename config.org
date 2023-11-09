@@ -13,6 +13,7 @@
   - [[#there-shall-be-evil][There shall be EVIL]]
   - [[#basic-uiux][Basic UI/UX]]
   - [[#theme-and-modeline][Theme and Modeline]]
+  - [[#dashboard][Dashboard]]
   - [[#font][Font]]
   - [[#helpful-commands][Helpful Commands]]
   - [[#magit][Magit]]
@@ -20,11 +21,13 @@
   - [[#rainbow-delimiters-and-mode][Rainbow Delimiters and Mode]]
   - [[#flycheck][Flycheck]]
   - [[#sudo][Sudo]]
+  - [[#comments][Comments]]
   - [[#undo-tree][Undo-tree]]
   - [[#which-key][Which key]]
   - [[#dired][Dired]]
   - [[#vterm][Vterm]]
   - [[#general-keybindings][General keybindings]]
+  - [[#copilot][Copilot]]
 - [[#org-mode][ORG MODE]]
 - [[#programming][Programming]]
   - [[#projectile][Projectile]]
@@ -103,6 +106,13 @@
   ;; Don't install anything. Defer execution of BODY
   ;;(elpaca nil (message "deferred"))
   (defvar native-comp-deferred-compilation-deny-list nil) ;; Some native stuff that I don't understand
+
+  ;; Well just a casual Mac OS issues.........
+  (use-package exec-path-from-shell
+    :if (memq window-system '(mac ns x))
+    :config
+    (exec-path-from-shell-initialize))
+
 #+end_src
 
 
@@ -135,6 +145,7 @@ Emacs is bad with large files??
   (setq large-file-warning-thresold 100000000)
 
   (setq make-backup-files nil) ; stop creating ~ files
+  (setq create-lockfiles nil) ; stop creating # files
 #+end_src
 
 
@@ -176,6 +187,11 @@ Emacs is bad with large files??
     :after evil
     :config
     (evil-collection-init))
+
+  (use-package evil-surround
+    :ensure t
+    :config
+    (global-evil-surround-mode 1))
 
   (with-eval-after-load 'evil-maps
     (define-key evil-motion-state-map (kbd "SPC") nil)
@@ -246,6 +262,32 @@ NOTE: The first time you load your configuration on a new machine, you’ll need
 		    doom-modeline-bar-width 5    ;; sets right bar width
 		    doom-modeline-persp-name t   ;; adds perspective name to modeline
 		    doom-modeline-persp-icon t)) ;; adds folder icon next to persp name
+#+end_src
+
+** Dashboard
+
+#+begin_src emacs-lisp
+
+    (use-package dashboard
+      :elpaca t
+      :config
+      (add-hook 'elpaca-after-init-hook #'dashboard-insert-startupify-lists)
+      (add-hook 'elpaca-after-init-hook #'dashboard-initialize)
+      (dashboard-setup-startup-hook)
+      (setq dashboard-startup-banner 'logo)
+      (setq dashboard-banner-logo-title "Welcome to the Society")
+  ;    (setq dashboard-icon-type 'all-the-icons) ;; use `all-the-icons' package
+      ;; Content is not centered by default. To center, set
+      (setq dashboard-center-content t)
+      (setq dashboard-set-init-info t)
+  ;    (setq dashboard-projects-switch-function 'projectile-switch-project)
+ ;     (setq dashboard-items '((recents  . 5)
+;			    (projects . 5)))
+      (setq dashboard-items nil)
+      )
+
+
+					    ; (setq initial-buffer-choice (lambda () (get-buffer-create "*dashboard*")))
 #+end_src
 
 ** Font
@@ -330,16 +372,28 @@ True and only
 
 #+begin_src emacs-lisp
   (use-package flycheck
-  :ensure t
-  :defer t
-  :diminish
-  :init (global-flycheck-mode))
+    :ensure t
+    :defer t
+    :diminish
+    :init (global-flycheck-mode))
 #+end_src
 
 ** Sudo
 
 #+begin_src emacs-lisp
   (use-package sudo-edit)
+#+end_src
+
+** Comments
+
+#+begin_src emacs-lisp
+;; TODO
+  (use-package evil-nerd-commenter
+    :config
+    (general-define-key
+     :states '(normal visual)
+     "gc" 'evilnc-comment-or-uncomment-lines))
+
 #+end_src
 
 ** Undo-tree
@@ -400,124 +454,143 @@ True and only
     (add-hook 'vterm-mode-hook #'evil-collection-vterm-escape-stay))
 
   (use-package vterm-toggle
-  :after vterm
-  :config
-  ;; When running programs in Vterm and in 'normal' mode, make sure that ESC
-  ;; kills the program as it would in most standard terminal programs.
-  (evil-define-key 'normal vterm-mode-map (kbd "<escape>") 'vterm--self-insert)
-  (setq vterm-toggle-fullscreen-p nil)
-  (setq vterm-toggle-scope 'project)
-  (add-to-list 'display-buffer-alist
-	       '((lambda (buffer-or-name _)
+    :after vterm
+    :config
+    ;; When running programs in Vterm and in 'normal' mode, make sure that ESC
+    ;; kills the program as it would in most standard terminal programs.
+    (evil-define-key 'normal vterm-mode-map (kbd "<escape>") 'vterm--self-insert)
+    (setq vterm-toggle-fullscreen-p nil)
+    (setq vterm-toggle-scope 'project)
+    (add-to-list 'display-buffer-alist
+		 '((lambda (buffer-or-name _)
 		     (let ((buffer (get-buffer buffer-or-name)))
 		       (with-current-buffer buffer
 			 (or (equal major-mode 'vterm-mode)
 			     (string-prefix-p vterm-buffer-name (buffer-name buffer))))))
-		  (display-buffer-reuse-window display-buffer-at-bottom)
-		  ;;(display-buffer-reuse-window display-buffer-in-direction)
-		  ;;display-buffer-in-direction/direction/dedicated is added in emacs27
-		  ;;(direction . bottom)
-		  ;;(dedicated . t) ;dedicated is supported in emacs27
-		  (reusable-frames . visible)
-		  (window-height . 0.4))))
+		   (display-buffer-reuse-window display-buffer-at-bottom)
+		   ;;(display-buffer-reuse-window display-buffer-in-direction)
+		   ;;display-buffer-in-direction/direction/dedicated is added in emacs27
+		   ;;(direction . bottom)
+		   ;;(dedicated . t) ;dedicated is supported in emacs27
+		   (reusable-frames . visible)
+		   (window-height . 0.4))))
 #+end_src
 
 ** General keybindings
 
 #+begin_src emacs-lisp
 
-    (use-package general
-      :config
-      (general-evil-setup)
+  (use-package general
+    :config
+    (general-evil-setup)
 
-      ;; set up 'SPC' as the global leader key
-      (general-create-definer verde/leader-keys
-	:states '(normal insert visual emacs)
-	:keymaps 'override
-	:prefix "SPC" ;; set leader
-	:global-prefix "M-SPC") ;; access leader in insert mode
+    ;; set up 'SPC' as the global leader key
+    (general-create-definer verde/leader-keys
+      :states '(normal insert visual emacs)
+      :keymaps 'override
+      :prefix "SPC" ;; set leader
+      :global-prefix "M-SPC") ;; access leader in insert mode
 
-      (general-create-definer verde/local-leader-key
-	:states '(normal visual)
-	:keymaps 'override
-	:prefix ",")
+    (general-create-definer verde/local-leader-key
+      :states '(normal visual)
+      :keymaps 'override
+      :prefix ",")
 
-      ;; general
-      (verde/leader-keys
-	"SPC" '(execute-extended-command :wk "Counsel M-x")
-	"=" '(perspective-map :wk "Worspace management") ;; Lists all the perspective keybindings
-	"q q" '(evil-quit :wk "Gtfo"))
-      ;; file navigation
-      (verde/leader-keys
-	"s" '(:ignore t :wk "Search")
-	"." '(find-file :wk "Find file")
-	"s s" '(consult-line :wk "Search line")
-	"s l" '(consult-goto-line :wk "Search line")
-	"s d" '(dictionary-search :wk "Search line")
-	)
-
-      (verde/leader-keys
-	"b" '(:ignore t :wk "Bookmarks/Buffers")
-	"b b" '(switch-to-buffer :wk "Switch to buffer")
-	"b c" '(clone-indirect-buffer :wk "Create indirect buffer copy in a split")
-	"b C" '(clone-indirect-buffer-other-window :wk "Clone indirect buffer in new window")
-	"b d" '(bookmark-delete :wk "Delete bookmark")
-	"b i" '(consult-buffer :wk "Ibuffer")
-	"b k" '(kill-current-buffer :wk "Kill current buffer")
-	"b K" '(kill-some-buffers :wk "Kill multiple buffers")
-	"b l" '(list-bookmarks :wk "List bookmarks")
-	"b m" '(bookmark-set :wk "Set bookmark")
-	"b n" '(next-buffer :wk "Next buffer")
-	"b p" '(previous-buffer :wk "Previous buffer")
-	"b r" '(revert-buffer :wk "Reload buffer")
-	"b R" '(rename-buffer :wk "Rename buffer")
-	"b s" '(basic-save-buffer :wk "Save buffer")
-	"b S" '(save-some-buffers :wk "Save multiple buffers")
-	"b w" '(bookmark-save :wk "Save current bookmarks to bookmark file"))
-      ;; magit
-      (verde/leader-keys
-	"g" '(:ignore t :wk "Git/Goto")
-	"g g" '(magit-status :wk "Git"))
-
-      ;; magit
-      (verde/leader-keys
-	"h" '(:ignore t :wk "Help")
-	"h v" '(describe-variable :wk "Describe variable")
-	"h f" '(describe-function :wk "Describe variable")
-	"h r" '(:ignore t :wk "Reload")
-	"h r r" '((lambda () (interactive)
-		    (load-file "~/.config/emacs/init.el")
-		    (ignore (elpaca-process-queues)))
-		  :wk "Reload emacs config"))
-
-      ;; files
-      (verde/leader-keys
-	"f" '(:ignore t :wk "Files")
-	"f r" '(consult-recent-file :wk "Recent files")
-	"f u" '(sudo-edit-find-file :wk "Sudo find file")
-	"f U" '(sudo-edit :wk "Sudo edit file")
-	"f c" '((lambda () (interactive)
-		  (find-file "~/.config/emacs/config.org"))
-		:wk "Open emacs config.org")
-	"f P" '((lambda () (interactive)
-		  (dired "~/.config/emacs/"))
-		:wk "Open user-emacs-directory in dired"))
-      ;; projectile
-      (verde/leader-keys
-	"p" '(projectile-command-map :wk "Projectile"))
-      ;; dired
-      (verde/leader-keys
-	"d" '(:ignore t :wk "Dired")
-	"d d" '(dired :wk "Open dired")
-	"d j" '(dired-jump :wk "Dired jump to current")
-	"d p" '(peep-dired :wk "Peep-dired"))
-      ;; open
-      (verde/leader-keys
-	"o" '(:ignore t :wk "Open/Toggle")
-	"o t" '(vterm-toggle :wk "Toggle Vterm")
-	"o e" '(vterm-toggle :wk "Toggle Treemacs"))
-
+    ;; general
+    (verde/leader-keys
+      "SPC" '(execute-extended-command :wk "Counsel M-x")
+      "=" '(perspective-map :wk "Worspace management") ;; Lists all the perspective keybindings
+      "q q" '(evil-quit :wk "Gtfo"))
+    ;; file navigation
+    (verde/leader-keys
+      "s" '(:ignore t :wk "Search")
+      "." '(find-file :wk "Find file")
+      "s s" '(consult-line :wk "Search line")
+      "s l" '(consult-goto-line :wk "Search line")
+      "s d" '(dictionary-search :wk "Search line")
       )
+
+    (verde/leader-keys
+      "b" '(:ignore t :wk "Bookmarks/Buffers")
+      "b b" '(switch-to-buffer :wk "Switch to buffer")
+      "b c" '(clone-indirect-buffer :wk "Create indirect buffer copy in a split")
+      "b C" '(clone-indirect-buffer-other-window :wk "Clone indirect buffer in new window")
+      "b d" '(bookmark-delete :wk "Delete bookmark")
+      "b i" '(consult-buffer :wk "Ibuffer")
+      "b k" '(kill-current-buffer :wk "Kill current buffer")
+      "b K" '(kill-some-buffers :wk "Kill multiple buffers")
+      "b l" '(list-bookmarks :wk "List bookmarks")
+      "b m" '(bookmark-set :wk "Set bookmark")
+      "b n" '(next-buffer :wk "Next buffer")
+      "b p" '(previous-buffer :wk "Previous buffer")
+      "b r" '(revert-buffer :wk "Reload buffer")
+      "b R" '(rename-buffer :wk "Rename buffer")
+      "b s" '(basic-save-buffer :wk "Save buffer")
+      "b S" '(save-some-buffers :wk "Save multiple buffers")
+      "b w" '(bookmark-save :wk "Save current bookmarks to bookmark file"))
+    ;; magit
+    (verde/leader-keys
+      "g" '(:ignore t :wk "Git/Goto")
+      "g g" '(magit-status :wk "Git"))
+
+    ;; magit
+    (verde/leader-keys
+      "h" '(:ignore t :wk "Help")
+      "h v" '(describe-variable :wk "Describe variable")
+      "h f" '(describe-function :wk "Describe variable")
+      "h r" '(:ignore t :wk "Reload")
+      "h r r" '((lambda () (interactive)
+		  (load-file "~/.config/emacs/init.el")
+		  (ignore (elpaca-process-queues)))
+		:wk "Reload emacs config"))
+
+    ;; files
+    (verde/leader-keys
+      "f" '(:ignore t :wk "Files")
+      "f r" '(consult-recent-file :wk "Recent files")
+      "f u" '(sudo-edit-find-file :wk "Sudo find file")
+      "f U" '(sudo-edit :wk "Sudo edit file")
+      "f c" '((lambda () (interactive)
+		(find-file "~/.config/emacs/config.org"))
+	      :wk "Open emacs config.org")
+      "f P" '((lambda () (interactive)
+		(dired "~/.config/emacs/"))
+	      :wk "Open user-emacs-directory in dired"))
+    ;; projectile
+    (verde/leader-keys
+      "p" '(projectile-command-map :wk "Projectile"))
+    ;; dired
+    (verde/leader-keys
+      "d" '(:ignore t :wk "Dired")
+      "d d" '(dired :wk "Open dired")
+      "d j" '(dired-jump :wk "Dired jump to current")
+      "d p" '(peep-dired :wk "Peep-dired"))
+    ;; open
+    (verde/leader-keys
+      "o" '(:ignore t :wk "Open/Toggle")
+      "o t" '(vterm-toggle :wk "Toggle Vterm")
+      "o e" '(vterm-toggle :wk "Toggle Treemacs"))
+
+    )
+
+#+end_src
+
+** Copilot
+
+#+begin_src emacs-lisp
+
+  (use-package copilot
+  :elpaca (copilot :host github
+		   :repo "zerolfx/copilot.el"
+		   :branch "main"
+		   :files ("dist" "*.el"))
+  :bind (:map copilot-completion-map
+	      ("<tab>" . 'copilot-accept-completion)
+	      ("TAB" . 'copilot-accept-completion)
+	      ("C-TAB" . 'copilot-accept-completion-by-word)
+	      ("C-<tab>" . 'copilot-accept-completion-by-word))
+  :hook (prog-mode . copilot-mode)
+  :config (add-hook 'prog-mode-hook 'copilot-mode))
 
 #+end_src
 
@@ -543,6 +616,7 @@ True and only
     :hook (org-mode . verde/org-mode-visual-fill))
 
 #+end_src
+
 
 * Programming
 
@@ -672,98 +746,149 @@ True and only
 ** Treesitter
 
 #+begin_src emacs-lisp
+  (use-package tree-sitter
+    :ensure t
+    :config
+    ;; activate tree-sitter on any buffer containing code for which it has a parser available
+    (global-tree-sitter-mode)
+    ;; you can easily see the difference tree-sitter-hl-mode makes for python, ts or tsx
+    ;; by switching on and off
+    (add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode))
 
-  (use-package tree-sitter)
-  (use-package tree-sitter-langs)
+  (use-package tree-sitter-langs
+    :ensure t
+    :after tree-sitter)
 
 #+end_src
 
 ** Formating
 
 #+begin_src emacs-lisp
-  (use-package format-all
-  :init
-  (add-hook 'prog-mode-hook 'format-all-mode))
+					  ; (use-package format-all
+					  ;  :init
+					  ;  (add-hook 'prog-mode-hook 'format-all-mode))
+
+  ;; auto-format different source code files extremely intelligently
+  ;; https://github.com/radian-software/apheleia
+  (use-package apheleia
+    :ensure t
+    :config
+    (apheleia-global-mode +1))
+
 #+end_src
 
 ** Language Server Protocol
 
 #+begin_src emacs-lisp
-  (use-package lsp-mode
-  :commands
-  (lsp lsp-deferred)
-  :hook
-  ((lsp-mode . (lambda () (setq-local evil-lookup-func #'lsp-describe-thing-at-point)))
-   (lsp-mode . lsp-enable-which-key-integration))
-  :general
-  (verde/leader-key
-    :states 'normal
-    :keymaps 'lsp-mode-map
-   ;; LSP
-   "g"   '(:ignore t :which-key "goto")
-   "g t" '(lsp-find-type-definition :which-key "type definition")
-   ;; lsp find
-   "g d" '(lsp-find-definition :which-key "definition")
-   "g r" '(lsp-find-references :which-key "reference")
-   "g i" '(lsp-find-implementation :which-key "implementation")
-   ;; lsp format
-   "c"   '(:ignore t :which-key "code")
-   "c f"  '(:ignore t :which-key "format")
-   "c f b" 'lsp-format-buffer
-   "c f r" 'lsp-format-region
 
-   "rn"  'lsp-rename
-    )
-  :init
-  (setq lsp-restart 'ignore)
-  (setq lsp-eldoc-enable-hover t)
-  (setq lsp-enable-file-watchers nil)
-  (setq lsp-signature-auto-activate nil)
-  (setq lsp-modeline-diagnostics-enable t)
-  (setq lsp-keep-workspace-alive nil)
-  (setq lsp-auto-execute-action nil)
-  (setq lsp-before-save-edits nil)
-  (setq lsp-headerline-breadcrumb-enable nil)
-  (setq lsp-diagnostics-provider :flycheck))
+  (use-package eglot
+    :ensure t)
+
+  (use-package lsp-mode
+    :commands
+    (lsp lsp-deferred)
+    :hook
+    ((lsp-mode . (lambda () (setq-local evil-lookup-func #'lsp-describe-thing-at-point)))
+     (lsp-mode . lsp-enable-which-key-integration))
+    :config
+    (verde/leader-keys
+      :states 'normal
+      :keymaps 'lsp-mode-map
+      ;; lsp format
+      "c"   '(:ignore t :which-key "code")
+      "c a" '(lsp-execute-code-action :which-key "code action")
+      "c f"  '(:ignore t :which-key "format")
+      "c f b" 'lsp-format-buffer
+      "c f r" 'lsp-format-region)
+    :init
+    (setq lsp-keep-workspace-alive nil)
+    (setq lsp-auto-execute-action nil)
+    (setq lsp-before-save-edits nil)
+    (setq lsp-headerline-breadcrumb-enable nil)
+    (setq lsp-restart 'ignore)
+    (setq lsp-enable-file-watchers nil)
+    ;; docs at the bottom of the buffer
+    (setq lsp-signature-auto-activate t)
+    (setq lsp-signature-render-documentation t)
+    ;; diagnostics at the right side
+    (setq lsp-modeline-diagnostics-enable t)
+    (setq lsp-diagnostics-provider :flycheck)
+    ;; bottom doc hover
+    (setq lsp-eldoc-enable-hover nil)
+    ;; modeline lenses
+    (setq lsp-lens-enable t))
 
   (use-package lsp-ui
-  :hook
-  ((lsp-mode . lsp-ui-mode)
-   ;; (lsp-mode . (lambda () (setq-local evil-goto-definition-functions '(lambda (&rest args) (lsp-ui-peek-find-definitions)))))
-   )
-  ;; :bind
-  ;; (:map lsp-ui-mode-map
-  ;;       ([remap lsp-find-references] . lsp-ui-peek-find-references))
-  :general
-  (verde/local-leader-key
-   "h" 'lsp-ui-doc-show
-   "H" 'lsp-ui-doc-hide)
-  (lsp-ui-peek-mode-map
-   :states 'normal
-   "C-j" 'lsp-ui-peek--select-next
-   "C-k" 'lsp-ui-peek--select-prev)
-  (outline-mode-map
-   :states 'normal
-   "C-j" 'nil
-   "C-k" 'nil)
-  :init
-  (setq lsp-ui-doc-show-with-cursor t)
-  (setq lsp-ui-doc-show-with-mouse nil)
-  (setq lsp-ui-peek-always-show t)
-  (setq lsp-ui-peek-fontify 'always))
+    :hook
+    (lsp-mode . lsp-ui-mode)
+    :config
+    (verde/local-leader-keys
+     "h" 'lsp-ui-doc-show
+     "H" 'lsp-ui-doc-hide)
+    (lsp-ui-peek-mode-map
+     :states 'normal
+     "C-j" 'lsp-ui-peek--select-next
+     "C-k" 'lsp-ui-peek--select-prev)
+    (outline-mode-map
+     :states 'normal
+     "C-j" 'nil
+     "C-k" 'nil)
+    :config
+    (general-define-key
+     :states 'normal
+     :keymaps 'lsp-mode-map
+     "g"   '(:ignore t :which-key "goto")
+     "C-SPC" 'company-complete-common
+     "g d" '(lsp-find-definition :which-key "definition")
+     "g t" '(lsp-find-type-definition :which-key "type definition")
+     "g D" '(lsp-ui-peek-find-definitions :which-key "definition")
+     "g r" '(lsp-ui-peek-find-references :which-key "reference")
+     "g i" '(lsp-ui-peek-find-implementation :which-key "implementation")
+
+     "g D" '(lsp-ui-peek-find-definitions :which-key "definition")
+     "g r" '(lsp-ui-peek-find-references :which-key "reference")
+     "g i" '(lsp-ui-peek-find-implementation :which-key "implementation")
+     ;; lsp diagnose with flycheck
+     "d"   '(:ignore t :which-key "diagnostics")
+     "d l" '(lsp-ui-flycheck-list :which-key "diagnostics list")
+     "rn"  'lsp-rename
+     )
+    :init
+    (setq lsp-ui-doc-show-with-cursor t)
+    (setq lsp-ui-show-diagnostics t)
+    (setq lsp-ui-sideline-enable t)
+    (setq lsp-ui-doc-show-with-mouse nil)
+    ;; (setq lsp-ui-peek-always-show t)
+    ;; (setq lsp-ui-peek-fontify 'always)
+    (setq lsp-ui-doc-enable t))
 
   (use-package lsp-treemacs
-  :after lsp
-  :custom
-  (lsp-treemacs-theme "doom-colors")
-  (treemacs-width 35)
-  (treemacs-git-mode 'extended)
-  (treemacs-git-display-mode 'treemacs-git-display-mode-git-status)
-  (treemacs-show-hidden-files t)
-  (treemacs-silent-refresh t)
-  (treemacs-silent-filewatch t)
-  (treemacs-collapse-dirs 0)
-  (treemacs-filewatch-mode 'deferred))
+    :after lsp
+    :custom
+    (lsp-treemacs-theme "doom-colors")
+    (treemacs-width 35)
+    (treemacs-git-mode 'extended)
+    (treemacs-git-display-mode 'treemacs-git-display-mode-git-status)
+    (treemacs-show-hidden-files t)
+    (treemacs-silent-refresh t)
+    (treemacs-silent-filewatch t)
+    (treemacs-collapse-dirs 0)
+    (treemacs-filewatch-mode 'deferred))
+
+  (use-package company
+    :after lsp-mode
+    :hook (lsp-mode . company-mode)
+    ;; :bind (:map company-active-map
+    ;;	   ("<tab>" . company-complete-selection))
+    :custom
+    (company-minimum-prefix-length 1)
+    (company-idle-delay 0.0)
+    :config (general-define-key
+	     :states 'insert
+	     "C-SPC" 'company-complete-common))
+
+  (use-package company-box
+    :hook (company-mode . company-box-mode))
 #+end_src
 
 ** Languages
@@ -771,9 +896,26 @@ True and only
 *** Typescript
 
 #+begin_src emacs-lisp
-(use-package typescript-mode
-  :mode "\\.ts\\'"
-  :hook (typescript-mode . lsp-deferred)
-  :config
-  (setq typescript-indent-level 2))
+
+  (use-package typescript-mode
+    :after tree-sitter
+    :hook (typescript-mode . lsp-deferred)
+    :config
+    ;; we choose this instead of tsx-mode so that eglot can automatically figure out language for server
+    ;; see https://github.com/joaotavora/eglot/issues/624 and https://github.com/joaotavora/eglot#handling-quirky-servers
+    (define-derived-mode typescriptreact-mode typescript-mode
+      "TypeScript TSX")
+    (setq typescript-indent-level 2)
+    ;; use our derived mode for tsx files
+    (add-to-list 'auto-mode-alist '("\\.tsx?\\'" . typescriptreact-mode))
+    ;; by default, typescript-mode is mapped to the treesitter typescript parser
+    ;; use our derived mode to map both .tsx AND .ts -> typescriptreact-mode -> treesitter tsx
+    (add-to-list 'tree-sitter-major-mode-language-alist '(typescriptreact-mode . tsx)))
+
+#+end_src
+
+*** Python
+
+#+begin_src emacs-lisp
+
 #+end_src
